@@ -1,0 +1,190 @@
+---
+title: "Convenciones de código GDScript y commits en Stewart"
+description: "Guía de estilo para GDScript, convenciones de nomenclatura, comentarios bilingües y el formato de Conventional Commits usado en el proyecto."
+---
+
+Stewart sigue un conjunto de convenciones de código para mantener el proyecto consistente y legible para todos los contribuidores. El lenguaje principal es GDScript, y se acepta C# como alternativa opcional. Estas guías cubren desde la nomenclatura de variables y clases hasta el formato de los mensajes de commit.
+
+## Convenciones de GDScript
+
+### Nomenclatura
+
+El proyecto usa tres estilos de nomenclatura según el tipo de símbolo:
+
+| Estilo | Uso | Ejemplos |
+|---|---|---|
+| `snake_case` | Variables, funciones, archivos | `player_name`, `play_anim()`, `flags_manager.gd` |
+| `PascalCase` | Nombres de clase | `Character`, `StateMachine`, `BaseState`, `AutoloadResource` |
+| `UPPER_SNAKE_CASE` | Constantes | `PATH_MAX_LENGTH`, `CHARA_DISTANCE`, `EPSILON` |
+
+### Comentarios y documentación
+
+Se usan `##` para doc-comments en el formato de documentación de Godot, y `#` para comentarios de línea regulares.
+
+```gdscript
+## Recurso base para todos los personajes del juego.
+## Contiene los datos compartidos entre el jugador y los NPCs.
+class_name Character
+extends Resource
+
+# Distancia mínima entre personajes en fila
+const CHARA_DISTANCE: float = 30.0
+```
+
+### Clases abstractas
+
+Las clases que no deben instanciarse directamente usan la anotación `@abstract`:
+
+```gdscript
+## Estado base abstracto para la máquina de estados.
+@abstract class_name BaseState extends Node
+```
+
+### Propiedades del inspector
+
+Se usa `@export` para exponer propiedades al inspector de Godot, y `@export_group` para agruparlas:
+
+```gdscript
+@export_group("Movimiento")
+@export var move_speed: float = 120.0
+@export var run_speed: float = 200.0
+
+@export_group("Personaje")
+@export var character_data: Character
+```
+
+### Referencias a nodos
+
+Las referencias a nodos del árbol de escena se declaran con `@onready`:
+
+```gdscript
+@onready var animation_player: AnimationPlayer = $AnimationPlayer
+@onready var state_machine: StateMachine = $StateMachine
+```
+
+### StringNames
+
+Los literales de tipo `StringName` usan el prefijo `&` para evitar conversiones innecesarias en tiempo de ejecución:
+
+```gdscript
+animation_player.play(&"idle")
+animation_player.play(&"run_right")
+```
+
+### Señales
+
+Las señales se declaran con la palabra clave `signal`:
+
+```gdscript
+signal movement_started
+signal character_reached_target(character: Character)
+```
+
+### Regiones de código
+
+Para organizar archivos largos se usan `#region` y `#endregion`:
+
+```gdscript
+#region Movimiento
+
+func move_toward_target() -> void:
+    pass
+
+func stop_movement() -> void:
+    pass
+
+#endregion
+```
+
+### Estructura general de un archivo
+
+Un archivo GDScript típico del proyecto sigue este orden:
+
+```gdscript
+## Doc-comment de la clase.
+class_name NombreDeClase
+extends NodoPadre
+
+# Constantes
+const EPSILON: float = 0.001
+
+# Señales
+signal state_changed(new_state: BaseState)
+
+# Propiedades exportadas
+@export_group("Configuración")
+@export var config_value: float = 1.0
+
+# Variables privadas
+var _current_state: BaseState
+
+# Nodos
+@onready var _animation_player: AnimationPlayer = $AnimationPlayer
+
+#region Ciclo de vida
+
+func _ready() -> void:
+    pass
+
+func _process(delta: float) -> void:
+    pass
+
+#endregion
+```
+
+## Convención bilingüe
+
+El proyecto usa dos idiomas con roles distintos:
+
+| Idioma | Uso |
+|---|---|
+| **Inglés** | Nombres de variables, funciones, señales, constantes y clases |
+| **Español** | Comentarios, doc-strings y mensajes de error |
+
+```gdscript
+## Mueve al personaje hacia su objetivo en la fila.
+## Retorna true si el personaje llegó al destino.
+func move_to_target(delta: float) -> bool:
+    # Verificar si ya estamos suficientemente cerca
+    if position.distance_to(target_position) < EPSILON:
+        return true
+
+    # Calcular dirección y aplicar velocidad
+    var direction := position.direction_to(target_position)
+    position += direction * move_speed * delta
+    return false
+```
+
+## Convenciones de commits
+
+El proyecto sigue la especificación de [Conventional Commits](https://www.conventionalcommits.org/). El formato es:
+
+```
+<tipo>(<ámbito opcional>): <descripción en español>
+```
+
+### Tipos de commit
+
+| Tipo | Uso |
+|---|---|
+| `feat` | Nueva funcionalidad |
+| `fix` | Corrección de error |
+| `docs` | Cambios en documentación |
+| `chore` | Mantenimiento (dependencias, configuración, etc.) |
+| `refactor` | Refactorización sin cambio de comportamiento |
+| `art` | Cambios en assets de arte |
+
+### Ejemplos
+
+```
+feat(movement): agregar sistema de movimiento en fila
+fix(character): corregir animaciones direccionales
+docs: actualizar README con requisitos de desarrollo
+chore: configurar addons y fuentes del proyecto
+refactor(state-machine): simplificar transiciones de estado
+art(player): agregar sprites de animación de correr
+```
+
+<Note>
+El ámbito (`scope`) es opcional pero recomendado cuando el cambio afecta un sistema específico. Usar ámbitos consistentes facilita leer el historial del proyecto con `git log`.
+</Note>

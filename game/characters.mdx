@@ -1,0 +1,47 @@
+---
+title: "Personajes de Stewart Prealpha: Stewart, Zarah y Gabi"
+description: "Stewart, Zarah y Gabi: roles, características, parámetros de movimiento y el sistema de formación en fila del trío protagonista."
+---
+
+Stewart presenta un trío de personajes que viajan juntos a lo largo de los siete reinos. **Stewart** encabeza el grupo como protagonista principal, acompañado por **Zarah** y **Gabi**. Los tres se desplazan en formación, moviéndose como una unidad a través del mundo del juego mediante un sistema de party implementado en el motor.
+
+## Los personajes
+
+<CardGroup cols={3}>
+  <Card title="Stewart" icon="shield">
+    Alce autoproclamado caballero y protagonista principal del juego. Lidera el viaje a través de los siete reinos.
+  </Card>
+  <Card title="Zarah" icon="star">
+    Compañera de viaje de Stewart. Es el personaje con el que se inicializa el sistema de estadísticas del jugador en el prototipo actual.
+  </Card>
+  <Card title="Gabi" icon="heart">
+    Compañera de viaje de Stewart. Forma parte del trío protagonista en la aventura por los reinos.
+  </Card>
+</CardGroup>
+
+## Sistema de formación
+
+Los personajes se desplazan en **formación de fila** (*party system*): cada personaje sigue al anterior manteniendo una distancia constante. Este sistema está implementado en el motor y define cómo el grupo se mueve como unidad por el mundo.
+
+Los parámetros de movimiento aplicados a todos los personajes son:
+
+| Parámetro | Valor |
+|---|---|
+| Velocidad al caminar (`walk_speed`) | `12.0` unidades |
+| Velocidad al correr (`run_speed`) | `24.0` unidades |
+| Distancia entre personajes (`CHARA_DISTANCE`) | `30.0` unidades |
+
+## Animaciones direccionales
+
+Cada personaje soporta animaciones para las cuatro direcciones de movimiento:
+
+- `up` — movimiento hacia arriba
+- `down` — movimiento hacia abajo
+- `right` / `side` — movimiento lateral
+- `left` — movimiento lateral (opuesto)
+
+Las direcciones se definen como constantes en el sistema de personajes y controlan qué animación se reproduce según la dirección actual de desplazamiento.
+
+## Estado en el prototipo
+
+En la versión 0.1 (prototipo), el movimiento en formación está funcional y el sistema de correr opera sin necesidad de teclas de flecha. Los detalles de personalidad, trasfondo y habilidades específicas de cada personaje se desarrollarán en versiones futuras del juego.

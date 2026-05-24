@@ -1,0 +1,57 @@
+---
+title: "Cambiar escenas en Stewart usando el SceneManager"
+description: "Cómo usar el singleton SceneManager para cambiar de escena en Stewart: método change_to_scene, recurso Scenes y registro de nuevas escenas."
+---
+
+El singleton **SceneManager** centraliza el cambio de escenas en Stewart. En lugar de llamar directamente a `get_tree().change_scene_to_file()` o cargar paquetes manualmente, cualquier script del proyecto puede invocar `SceneManager.change_to_scene("nombre")` para transitar a una escena registrada. Las escenas disponibles se gestionan a través de un recurso `Scenes` editable desde el inspector de Godot.
+
+## Configuración
+
+`SceneManager` extiende `Node` y se registra como autoload en el proyecto. Al iniciarse, carga el recurso de escenas y verifica que todos los ítems sean del tipo correcto.
+
+```gdscript scene_manager.gd
+extends Node
+
+var _scenes: Scenes = load("uid://blrv6slovjbul")
+
+func _ready():
+    _scenes.expected_type = TYPE_OBJECT
+    _scenes.check_item_types()
+```
+
+## Métodos públicos
+
+### `change_to_scene(scene_name: String) -> void`
+
+Cambia a la escena identificada por `scene_name` usando `get_tree().change_scene_to_packed()`.
+
+```gdscript
+func change_to_scene(scene_name: String) -> void:
+    get_tree().change_scene_to_packed(_scenes.get_item(scene_name))
+```
+
+| Parámetro | Tipo | Descripción |
+|-----------|------|-------------|
+| `scene_name` | `String` | Nombre de la escena registrada en `scenes.tres` |
+
+## Recurso de escenas
+
+Las escenas disponibles se registran en `res://autoload/resources/scenes.tres`, un recurso de tipo `Scenes` editable desde el inspector de Godot. Cada entrada asocia un nombre clave (`String`) con un `PackedScene`.
+
+<Note>
+  Antes de llamar a `change_to_scene` con una nueva escena, debes registrarla en `scenes.tres` a través del inspector. Si el nombre no existe en el recurso, `get_item` no encontrará la escena y el cambio fallará en tiempo de ejecución.
+</Note>
+
+<Tip>
+  Para ver qué escenas están disponibles, abre `res://autoload/resources/scenes.tres` en el inspector de Godot. Los nombres de las claves son exactamente los valores que debes pasar a `change_to_scene`.
+</Tip>
+
+## Ejemplo de uso
+
+```gdscript llamar desde otro script
+# Cambiar a la escena principal del juego
+SceneManager.change_to_scene("mapa_principal")
+
+# Ir a la pantalla de título desde cualquier parte del proyecto
+SceneManager.change_to_scene("titulo")
+```

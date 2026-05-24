@@ -1,0 +1,147 @@
+---
+title: "Sistema de recursos tipados AutoloadResource en Stewart"
+description: "La clase base AutoloadResource y los tres tipos concretos: Flags, Playlist y Scenes, con validación de tipos en tiempo de ejecución."
+---
+
+El sistema `AutoloadResource` es una capa de abstracción sobre los recursos `.tres` de Godot que permite a los autoloads acceder a colecciones de datos con nombre de forma segura. En lugar de cargar recursos sueltos desde distintos scripts, cada autoload carga un único `AutoloadResource` que actúa como registro tipado de items accesibles por clave de texto.
+
+## Clase base `AutoloadResource`
+
+`AutoloadResource` es una clase abstracta que extiende `Resource`. Todas las colecciones de datos del proyecto heredan de ella.
+
+```gdscript autoload_resource.gd
+@abstract class_name AutoloadResource extends Resource
+
+@export var items: Dictionary[String, Variant]
+
+var expected_type: int
+
+func get_item(name: String):
+	if not name in items.keys():
+		push_error("Elemento de AutoloadResource no encontrado: %s" % name)
+		return null
+	return items[name]
+
+func set_item(name: String, value) -> void:
+	if not _check_item(value):
+		return
+	if not name in items.keys():
+		push_error("Elemento de AutoloadResource no encontrado: %s. El elemento será creado" % name)
+	items[name] = value
+
+func check_item_types() -> bool:
+	for item in items.values():
+		if not _check_item(item): return false
+	return true
+
+func _check_item(item):
+	if typeof(item) != expected_type:
+		push_error(
+			"Valor de AutoloadResource de tipo incorrecto. Esperado: %s, Obtenido: %s."
+			% [expected_type, typeof(item)]
+		)
+		return false
+	return true
+```
+
+### Propiedades y métodos
+
+| Nombre | Tipo | Descripción |
+|---|---|---|
+| `items` | `Dictionary[String, Variant]` | Diccionario exportado con los datos. Se edita desde el inspector de Godot en el archivo `.tres`. |
+| `expected_type` | `int` | Constante `TYPE_*` de Godot que define el tipo permitido para todos los valores del diccionario. Lo asigna el autoload en `_ready`. |
+| `get_item(name)` | `Variant` | Devuelve el valor asociado a `name`. Si la clave no existe, llama a `push_error` y retorna `null`. |
+| `set_item(name, value)` | `void` | Actualiza o crea un item. Valida el tipo antes de escribir. |
+| `check_item_types()` | `bool` | Recorre todos los valores y verifica que sean del tipo esperado. Retorna `false` en el primer error encontrado. |
+
+<Note>
+  Si un item tiene el tipo incorrecto, `AutoloadResource` llama a `push_error` en tiempo de ejecución pero no lanza una excepción. El autoload que usa el recurso debe llamar a `check_item_types()` en su `_ready` para detectar problemas al iniciar.
+</Note>
+
+---
+
+## Tipos concretos
+
+### `Flags`
+
+Almacena banderas booleanas que dictan el avance narrativo del juego. El tipo esperado es `TYPE_BOOL`.
+
+```gdscript flags.gd
+class_name Flags extends AutoloadResource
+# Stores boolean flags that dictate game progression
+```
+
+**Archivo de recurso:** `autoload/resources/flags.tres`
+
+El autoload `FlagsManager` carga este recurso y configura `expected_type = TYPE_BOOL` antes de llamar a `check_item_types()`:
+
+```gdscript
+func _ready():
+	_flags.expected_type = TYPE_BOOL
+	_flags.check_item_types()
+```
+
+---
+
+### `Playlist`
+
+Almacena pistas de audio indexadas por nombre. Los valores son objetos `AudioStream`. El tipo esperado es `TYPE_OBJECT`.
+
+```gdscript playlist.gd
+class_name Playlist extends AutoloadResource
+```
+
+**Archivo de recurso:** `autoload/resources/playlist.tres`
+
+El autoload `MusicManager` carga este recurso para acceder a las pistas por nombre:
+
+```gdscript
+func play_music(music_name: String) -> void:
+	stream = _playlist.get_item(music_name)
+	play()
+```
+
+---
+
+### `Scenes`
+
+Almacena escenas del juego indexadas por nombre. Los valores son objetos `PackedScene`. El tipo esperado es `TYPE_OBJECT`.
+
+```gdscript scenes.gd
+class_name Scenes extends AutoloadResource
+```
+
+**Archivo de recurso:** `autoload/resources/scenes.tres`
+
+El autoload `SceneManager` carga este recurso para cambiar de escena por nombre:
+
+```gdscript
+func change_to_scene(scene_name: String) -> void:
+	get_tree().change_scene_to_packed(_scenes.get_item(scene_name))
+```
+
+---
+
+## Registrar items en el inspector
+
+Los archivos `.tres` se editan directamente desde el inspector de Godot. Para añadir un nuevo item a cualquiera de los recursos:
+
+<Steps>
+  <Step title="Abre el archivo .tres en el inspector">
+    En el panel **FileSystem** de Godot, haz doble clic sobre el archivo `.tres` correspondiente (`flags.tres`, `playlist.tres` o `scenes.tres`). El inspector mostrará el recurso y su propiedad `items`.
+  </Step>
+  <Step title="Añade una nueva entrada al diccionario">
+    Expande la propiedad `items` en el inspector. Haz clic en **Add Element** para añadir una nueva entrada clave–valor.
+
+    - En `flags.tres`: la clave es el nombre de la bandera (p. ej., `"visited_tavern"`), el valor es `false` o `true`.
+    - En `playlist.tres`: la clave es el nombre de la pista (p. ej., `"overworld_theme"`), el valor es un `AudioStream` arrastrado desde el FileSystem.
+    - En `scenes.tres`: la clave es el nombre de la escena (p. ej., `"village"`), el valor es un `PackedScene` arrastrado desde el FileSystem.
+  </Step>
+  <Step title="Guarda el archivo">
+    Godot guarda automáticamente los recursos `.tres` al cambiar de foco. Puedes forzar el guardado con **Ctrl+S**.
+  </Step>
+</Steps>
+
+<Tip>
+  Para ver todas las banderas disponibles, abre `autoload/resources/flags.tres` en el inspector. Para ver todas las escenas registradas, abre `scenes.tres`. Para ver las pistas de música disponibles, abre `playlist.tres`. El diccionario `items` de cada recurso es la fuente de verdad de las claves válidas.
+</Tip>

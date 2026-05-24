@@ -1,0 +1,87 @@
+---
+title: "Flujo de trabajo Git para contribuidores de Stewart"
+description: "Flujo de ramas Git para Stewart: cómo sincronizar con main, crear ramas con la convención correcta, hacer commits y abrir Pull Requests."
+---
+
+El proyecto Stewart sigue un flujo de trabajo basado en ramas de Git para mantener el historial limpio y facilitar la revisión de cambios en equipo. Cada tarea nueva se desarrolla en su propia rama y se integra a la rama principal mediante un Pull Request revisado por el equipo.
+
+<Note>
+Antes de iniciar cualquier tarea, asegúrate de tener tu rama principal (`main`) sincronizada con el repositorio remoto. Trabajar sobre una rama desactualizada puede generar conflictos innecesarios.
+</Note>
+
+## Flujo de trabajo paso a paso
+
+<Steps>
+  <Step title="Sincroniza con main">
+    Antes de comenzar, actualiza tu copia local de la rama principal:
+
+    ```bash
+    git checkout main
+    git pull
+    ```
+  </Step>
+
+  <Step title="Crea una rama para tu tarea">
+    Crea una rama nueva con el formato `<tipo>/<nombre-descriptivo>`:
+
+    ```bash
+    git checkout -b feat/sistema-de-inventario
+    ```
+
+    Consulta la sección de [nomenclatura de ramas](#nomenclatura-de-ramas) para elegir el tipo correcto.
+  </Step>
+
+  <Step title="Haz commits siguiendo Commits Convencionales">
+    Registra tus cambios con mensajes descriptivos en el formato de [Conventional Commits](https://www.conventionalcommits.org/):
+
+    ```bash
+    git add .
+    git commit -m "feat(inventory): agregar lógica base del sistema de inventario"
+    ```
+
+    Consulta la guía de [convenciones de commits](/development/conventions) para más detalles.
+  </Step>
+
+  <Step title="Sube la rama al repositorio remoto">
+    Publica tu rama en GitHub:
+
+    ```bash
+    git push origin feat/sistema-de-inventario
+    ```
+  </Step>
+
+  <Step title="Abre un Pull Request">
+    Ve a GitHub y abre un Pull Request desde tu rama hacia `main`. Describe brevemente los cambios realizados y enlaza cualquier issue relacionado para facilitar la revisión del equipo.
+  </Step>
+</Steps>
+
+<Tip>
+Mantén cada rama enfocada en una sola tarea o funcionalidad. Las ramas pequeñas y específicas son más fáciles de revisar, menos propensas a conflictos y más sencillas de revertir si es necesario.
+</Tip>
+
+## Nomenclatura de ramas
+
+Las ramas siguen el formato `<tipo>/<nombre-descriptivo>`, donde el nombre describe brevemente la tarea en palabras separadas por guiones.
+
+| Tipo | Uso |
+|---|---|
+| `feat/` | Nueva funcionalidad |
+| `fix/` | Corrección de errores |
+| `docs/` | Cambios en documentación |
+| `chore/` | Tareas de mantenimiento |
+| `refactor/` | Refactorización sin cambio de comportamiento |
+| `art/` | Assets de arte |
+
+**Ejemplos:**
+
+```
+feat/dialogo-npc
+fix/animacion-correr
+docs/guia-contribucion
+art/sprites-personaje-principal
+refactor/sistema-movimiento
+```
+
+## GitHub Desktop
+
+Si prefieres una interfaz gráfica, puedes usar [GitHub Desktop](https://desktop.github.com/) para gestionar todo el flujo de trabajo: cambiar de rama, hacer commits, resolver conflictos y abrir Pull Requests, sin necesidad de usar la terminal.

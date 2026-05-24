@@ -1,0 +1,239 @@
+---
+title: "Máquina de estados modular: StateMachine y BaseState"
+description: "El addon StateMachine de Stewart: arquitectura de BaseState, ciclo de vida de los estados y cómo añadir nuevos comportamientos al juego."
+---
+
+El addon `state_machine` proporciona un sistema de máquina de estados finitos (FSM) reutilizable para cualquier nodo de Godot 4. En lugar de gestionar lógica de comportamiento con variables de bandera o condicionales anidados, cada estado es un nodo independiente con su propio script. La máquina se encarga de las transiciones; los estados se encargan del comportamiento.
+
+## Arquitectura
+
+El sistema está formado por dos clases:
+
+- **`StateMachine`** — Nodo que coordina los estados. Se añade como hijo del nodo que quieres controlar (o en cualquier lugar del árbol). Llama a `update` y `physics_update` en el estado activo cada frame.
+- **`BaseState`** — Clase abstracta que todo estado debe extender. Define el contrato de ciclo de vida: `start`, `update`, `physics_update` y `exit`.
+
+### Jerarquía de escena
+
+```text
+Character (CharacterBody2D)
+└── StateMachine
+    ├── Idle (CharacterIdle)
+    ├── Walk (CharacterWalk)
+    └── Run (CharacterRun)
+```
+
+`StateMachine` recorre sus nodos hijos en `_ready` y registra en un diccionario todos los que sean `BaseState`. La clave es el script del estado, lo que permite solicitar transiciones por tipo en lugar de por referencia directa.
+
+## Clase `StateMachine`
+
+```gdscript state_machine.gd
+@icon("res://addons/state_machine/state_machine_icon.svg")
+class_name StateMachine extends Node
+
+@export var controlled_node: Node
+@export var default_state: BaseState
+
+var states: Dictionary[Script, BaseState] = {}
+var current_state: BaseState
+
+func _ready() -> void:
+	if not controlled_node:
+		push_error("[StateMachine] No hay nodo objetivo para controlar")
+		return
+	for child in get_children():
+		if not child.get_script():
+			push_error("[StateMachine] El estado %s no tiene un script asignado" % child.name)
+			continue
+		if not child is BaseState:
+			push_error("[StateMachine] El estado %s no es un BaseState" % child.name)
+			continue
+		states[child.get_script()] = child
+		child.to_state.connect(change_to_state)
+	current_state = default_state
+	if not current_state:
+		push_error("[StateMachine] No hay estado inicial")
+		return
+	_setup_current_state()
+
+func change_to_state(next_state: Script) -> void:
+	if current_state.has_method("exit"): current_state.exit()
+	current_state = states[next_state] if states.has(next_state) else default_state
+	_setup_current_state()
+
+func _process(delta: float) -> void:
+	if current_state.has_method("update"): current_state.update(delta)
+
+func _physics_process(delta: float) -> void:
+	if current_state.has_method("physics_update"): current_state.physics_update(delta)
+
+func _setup_current_state() -> void:
+	current_state.controlled_node = controlled_node
+	if current_state.has_method("start"): current_state.start()
+```
+
+### Propiedades exportadas
+
+| Propiedad | Tipo | Descripción |
+|---|---|---|
+| `controlled_node` | `Node` | El nodo que los estados van a controlar. Se inyecta automáticamente en cada estado al inicio. |
+| `default_state` | `BaseState` | Estado inicial al entrar en la escena. También se usa como fallback si se solicita un estado no registrado. |
+
+### Método `change_to_state`
+
+```gdscript
+func change_to_state(next_state: Script) -> void
+```
+
+Llama a `exit()` en el estado actual, busca el nuevo estado en el diccionario por script y llama a `_setup_current_state()`, que inyecta `controlled_node` y llama a `start()`. Si el script solicitado no está registrado, la máquina vuelve al `default_state`.
+
+## Clase `BaseState`
+
+```gdscript base_state.gd
+@abstract class_name BaseState extends Node
+
+var controlled_node: Node
+
+@warning_ignore("unused_signal")
+signal to_state(next_state: Script)
+
+func start() -> void:
+	pass
+
+@warning_ignore("unused_parameter")
+func update(delta: float) -> void:
+	pass
+
+@warning_ignore("unused_parameter")
+func physics_update(delta: float) -> void:
+	pass
+
+func exit() -> void:
+	pass
+```
+
+### Señal y métodos del ciclo de vida
+
+| Nombre | Firma | Descripción |
+|---|---|---|
+| `to_state` | `signal to_state(next_state: Script)` | Emite el script del estado destino para solicitar una transición. La `StateMachine` está conectada a esta señal. |
+| `start()` | `func start() -> void` | Se llama cuando el estado se activa. Úsalo para inicializar animaciones, velocidades o cualquier lógica de entrada. |
+| `update(delta)` | `func update(delta: float) -> void` | Se llama en `_process`. Lógica que depende de frames, como entrada de usuario no física. |
+| `physics_update(delta)` | `func physics_update(delta: float) -> void` | Se llama en `_physics_process`. Movimiento y física del personaje. |
+| `exit()` | `func exit() -> void` | Se llama justo antes de salir del estado. Úsalo para limpiar efectos o resetear valores. |
+
+## `CharacterState`: clase intermedia
+
+Los estados de los personajes jugables no extienden directamente `BaseState`, sino `CharacterState`, que añade un acceso tipado al nodo controlado.
+
+```gdscript character_state.gd
+class_name CharacterState extends BaseState
+
+## Wrapper para el personaje
+var character: Character:
+	set(value):
+		character = value
+		controlled_node = value
+	get:
+		return controlled_node
+```
+
+Esto permite usar `character.velocity`, `character.input_direction`, etc., sin castings manuales en cada estado.
+
+## Estados del personaje
+
+<AccordionGroup>
+  <Accordion title="Idle — reposo">
+
+```gdscript idle.gd
+class_name CharacterIdle extends CharacterState
+
+func start() -> void:
+	if not character.is_node_ready(): await character.ready
+	character.velocity = Vector2.ZERO
+	character.play_anim(&"idle")
+
+func physics_update(_delta: float) -> void:
+	if Input.is_action_pressed(&"sprint"): to_state.emit(CharacterRun)
+	if character.input_direction: to_state.emit(CharacterWalk)
+```
+
+El personaje detiene su velocidad y reproduce la animación de reposo. Transita a **Walk** si hay entrada direccional, o a **Run** si se mantiene pulsado `sprint`.
+
+  </Accordion>
+  <Accordion title="Walk — caminar">
+
+```gdscript walk.gd
+class_name CharacterWalk extends CharacterState
+
+func start() -> void:
+	character.play_anim(&"walk")
+
+func physics_update(_delta: float) -> void:
+	if not character.input_direction:
+		to_state.emit(CharacterIdle)
+		return
+	if Input.is_action_pressed(&"sprint"):
+		to_state.emit(CharacterRun)
+		return
+	character.velocity = character.input_direction * character.walk_speed
+```
+
+Mueve al personaje en la dirección de la entrada a `walk_speed`. Transita a **Idle** al soltar el joystick o a **Run** al presionar `sprint`.
+
+  </Accordion>
+  <Accordion title="Run — correr">
+
+```gdscript run.gd
+class_name CharacterRun extends CharacterState
+
+func start() -> void:
+	character.play_anim(&"run")
+
+func physics_update(_delta: float) -> void:
+	character.velocity = character.last_direction * character.run_speed
+	if character.velocity.is_zero_approx():
+		to_state.emit(CharacterIdle)
+		return
+	if not Input.is_action_pressed(&"sprint"):
+		to_state.emit(CharacterWalk)
+		return
+```
+
+Corre en la última dirección registrada a `run_speed`. Transita a **Idle** si la velocidad es cero, o a **Walk** al soltar `sprint`.
+
+  </Accordion>
+</AccordionGroup>
+
+## Cómo añadir un nuevo estado
+
+<Steps>
+  <Step title="Crea el script del estado">
+    Crea un nuevo archivo `.gd` que extienda `CharacterState` (o `BaseState` si es para otro tipo de nodo). Implementa solo los métodos que necesites.
+
+    ```gdscript attack.gd
+    class_name CharacterAttack extends CharacterState
+
+    func start() -> void:
+        character.play_anim(&"attack")
+
+    func physics_update(_delta: float) -> void:
+        # lógica de ataque...
+        if animation_finished:
+            to_state.emit(CharacterIdle)
+    ```
+  </Step>
+  <Step title="Añade un nodo hijo a StateMachine">
+    En el editor, añade un nodo `Node` como hijo de `StateMachine`. Asígnale el script recién creado desde el inspector.
+  </Step>
+  <Step title="Verifica que StateMachine lo registre">
+    Al ejecutar la escena, `StateMachine._ready()` registrará el nuevo estado automáticamente porque es hijo suyo y extiende `BaseState`. No se requiere ninguna configuración adicional.
+  </Step>
+  <Step title="Emite to_state desde otro estado">
+    Desde cualquier estado existente, llama a `to_state.emit(CharacterAttack)` para transitar al nuevo estado.
+
+    ```gdscript
+    if Input.is_action_just_pressed(&"attack"):
+        to_state.emit(CharacterAttack)
+    ```
+  </Step>
+</Steps>

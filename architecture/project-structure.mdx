@@ -1,0 +1,124 @@
+---
+title: "Estructura de carpetas y organización del proyecto Stewart"
+description: "Cómo está organizado el repositorio de Stewart Prealpha: carpetas addons, assets y autoload, convenciones de colores y licencias del proyecto."
+---
+
+El repositorio de Stewart Prealpha sigue una estructura deliberada que separa las herramientas externas, los recursos del juego y los sistemas globales en tres carpetas de primer nivel. Esta separación facilita navegar el proyecto, asignar responsabilidades y escalar el contenido sin mezclar distintas capas de la arquitectura.
+
+## Árbol de directorios
+
+```text
+stewart_prealpha/
+├── .docs/
+│   └── changelog.md
+├── addons/
+│   ├── dialogue_manager/
+│   ├── Pixel Crawler - Free Pack/
+│   ├── state_machine/
+│   └── vector_display_2d/
+├── assets/
+│   ├── character/
+│   │   ├── character.gd
+│   │   ├── character.tscn
+│   │   ├── sprites/
+│   │   └── states/
+│   │       ├── character_state.gd
+│   │       ├── idle.gd
+│   │       ├── walk.gd
+│   │       └── run.gd
+│   ├── dialogues/
+│   ├── fonts/
+│   ├── ui/
+│   └── world/
+│       ├── characters_path.gd
+│       ├── tilemaps/
+│       └── world.tscn
+├── autoload/
+│   ├── flags_manager.gd
+│   ├── game_constants.gd
+│   ├── music_manager.gd
+│   ├── player_stats.gd
+│   ├── scene_manager.gd
+│   └── resources/
+│       ├── flags.tres
+│       ├── playlist.tres
+│       ├── scenes.tres
+│       └── scripts/
+│           ├── autoload_resource.gd
+│           ├── flags.gd
+│           ├── playlist.gd
+│           └── scenes.gd
+├── project.godot
+├── LICENSE
+└── ASSETS_LICENSE.md
+```
+
+## Carpetas principales
+
+### `addons/`
+
+Contiene los plugins y extensiones del editor de Godot. Ningún código de juego vive aquí; solo herramientas que amplían el motor o que se importan desde fuentes externas.
+
+| Addon | Descripción |
+|---|---|
+| `state_machine/` | Máquina de estados modular desarrollada para el proyecto |
+| `dialogue_manager/` | Plugin de diálogos por Nathan Hoad |
+| `Pixel Crawler - Free Pack/` | Pack de assets gráficos |
+| `vector_display_2d/` | Herramienta de depuración para visualizar vectores en 2D |
+
+### `assets/`
+
+Agrupa todos los recursos del juego: escenas, scripts de gameplay, sprites, fuentes e interfaces. Está organizada por dominio funcional en lugar de por tipo de archivo.
+
+| Subcarpeta | Contenido |
+|---|---|
+| `character/` | Clase base `Character`, escena del personaje y scripts de estados (Idle, Walk, Run) |
+| `world/` | Escena principal del mundo, tilemaps y el sistema de seguimiento en fila |
+| `dialogues/` | Globo de diálogo y tema visual de las conversaciones |
+| `ui/` | Elementos de interfaz de usuario |
+| `fonts/` | Fuentes tipográficas del proyecto |
+
+### `autoload/`
+
+Contiene los singletons registrados en `project.godot` y los recursos `.tres` que consumen. Todo lo que necesita estar disponible globalmente —gestión de escenas, música, banderas de progresión, estadísticas del jugador— vive aquí.
+
+La subcarpeta `resources/` almacena tanto los scripts de recurso (`AutoloadResource` y sus subclases) como los archivos `.tres` con los datos reales.
+
+## Colores de carpetas en el editor
+
+El archivo `project.godot` asigna colores a las carpetas principales para facilitar la navegación visual dentro del editor de Godot:
+
+| Carpeta | Color |
+|---|---|
+| `addons/` | Morado |
+| `assets/` | Verde |
+| `autoload/` | Azul |
+
+## Licencias
+
+El proyecto usa dos licencias según el tipo de contenido:
+
+| Componente | Licencia | Archivo |
+|---|---|---|
+| Código fuente | [MIT](https://opensource.org/licenses/MIT) | `LICENSE` |
+| Assets y elementos creativos | [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/) | `ASSETS_LICENSE.md` |
+
+La licencia MIT aplica a todos los scripts `.gd` y archivos de configuración del proyecto. La licencia CC BY-NC 4.0 aplica a los assets gráficos, de audio y otros recursos creativos.
+
+<Note>
+  La carpeta `.docs/` contiene documentación interna del equipo, como el changelog de desarrollo. No forma parte del juego exportado ni del repositorio público de documentación.
+</Note>
+
+## Explora la arquitectura
+
+<CardGroup cols={3}>
+  <Card title="Máquina de estados" icon="diagram-project" href="/architecture/state-machine">
+    Cómo funciona el addon StateMachine y cómo crear nuevos estados.
+  </Card>
+  <Card title="Autoloads" icon="globe" href="/architecture/autoloads">
+    Los singletons globales y sus responsabilidades.
+  </Card>
+  <Card title="Sistema de recursos" icon="database" href="/architecture/resources">
+    La clase AutoloadResource y los tipos concretos: Flags, Playlist y Scenes.
+  </Card>
+</CardGroup>

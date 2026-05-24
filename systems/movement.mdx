@@ -1,0 +1,150 @@
+---
+title: "Sistema de movimiento y seguimiento en fila de personajes"
+description: "Cómo funciona el movimiento del grupo: estados Idle, Walk y Run, seguimiento en fila y animaciones direccionales para múltiples personajes."
+---
+
+El sistema de movimiento de Stewart controla tanto al personaje jugable como a los acompañantes que lo siguen en fila. El líder del grupo responde a las entradas del jugador mediante una máquina de estados con tres estados (Idle, Walk, Run), mientras que los seguidores se posicionan automáticamente a lo largo de una curva `Path2D` que rastrea la trayectoria del líder.
+
+## Controles
+
+| Acción | Teclado |
+|--------|---------|
+| Mover | Flechas direccionales / WASD |
+| Correr | C (mantener) |
+
+## Constantes de movimiento
+
+| Constante | Valor | Descripción |
+|-----------|-------|-------------|
+| `walk_speed` | `12.0` | Velocidad de caminata (unidades/frame) |
+| `run_speed` | `24.0` | Velocidad de carrera (unidades/frame) |
+| `CHARA_DISTANCE` | `30.0` | Distancia en píxeles entre personajes en la fila |
+| `PATH_MAX_LENGTH` | `100.0` | Longitud máxima de la curva de seguimiento |
+| `MIN_PATH_TRACE` | `1.0` | Distancia mínima recorrida para registrar un nuevo punto en la curva |
+
+## Máquina de estados
+
+Cada personaje usa una `StateMachine` que transita entre tres estados. El estado activo llama a `physics_update` en cada frame y puede emitir la señal `to_state` para cambiar de estado.
+
+<Steps>
+  <Step title="Idle">
+    El personaje está en reposo. La velocidad se fija en `Vector2.ZERO` y se reproduce la animación `idle_<dirección>`.
+
+    Transita a **Walk** si hay entrada direccional activa, o a **Run** si se mantiene presionada la tecla `sprint` (C).
+  </Step>
+  <Step title="Walk">
+    El personaje se mueve en la dirección de la entrada a `walk_speed`. Se reproduce la animación `walk_<dirección>`.
+
+    Transita a **Idle** cuando se suelta el joystick/teclado, o a **Run** al presionar `sprint`.
+  </Step>
+  <Step title="Run">
+    El personaje corre en la `last_direction` registrada a `run_speed`. Se reproduce la animación `run_<dirección>`.
+
+    Transita a **Idle** si la velocidad es aproximadamente cero, o a **Walk** al soltar `sprint`.
+  </Step>
+</Steps>
+
+<CodeGroup>
+
+```gdscript idle.gd
+class_name CharacterIdle extends CharacterState
+
+func start() -> void:
+    if not character.is_node_ready(): await character.ready
+    character.velocity = Vector2.ZERO
+    character.play_anim(&"idle")
+
+func physics_update(_delta: float) -> void:
+    if Input.is_action_pressed(&"sprint"): to_state.emit(CharacterRun)
+    if character.input_direction: to_state.emit(CharacterWalk)
+```
+
+```gdscript walk.gd
+class_name CharacterWalk extends CharacterState
+
+func start() -> void:
+    character.play_anim(&"walk")
+
+func physics_update(_delta: float) -> void:
+    if not character.input_direction:
+        to_state.emit(CharacterIdle)
+        return
+    if Input.is_action_pressed(&"sprint"):
+        to_state.emit(CharacterRun)
+        return
+    character.velocity = character.input_direction * character.walk_speed
+```
+
+```gdscript run.gd
+class_name CharacterRun extends CharacterState
+
+func start() -> void:
+    character.play_anim(&"run")
+
+func physics_update(_delta: float) -> void:
+    character.velocity = character.last_direction * character.run_speed
+    if character.velocity.is_zero_approx():
+        to_state.emit(CharacterIdle)
+        return
+    if not Input.is_action_pressed(&"sprint"):
+        to_state.emit(CharacterWalk)
+        return
+```
+
+</CodeGroup>
+
+## Sistema de seguimiento en fila
+
+La clase `CharactersPath` (extiende `Path2D`) gestiona la fila de personajes. El primer hijo del nodo `characters_node` que sea `Character` se designa como **líder**; los demás se convierten en **seguidores**.
+
+- El líder emite la señal `update_path` cada vez que se mueve al menos `MIN_PATH_TRACE` unidades, añadiendo un punto a la curva `Path2D`.
+- Cuando la curva supera `PATH_MAX_LENGTH`, se elimina el punto más antiguo para mantener una longitud constante.
+- Cada seguidor se ancla a un nodo `PathFollow2D` con un `RemoteTransform2D` que actualiza su posición en la curva. La distancia de cada seguidor al final de la curva es `baked_length - (i + 1) * CHARA_DISTANCE`.
+- Los seguidores tienen `collision_layer` y `collision_mask` en `0` para no bloquear al líder.
+
+```gdscript characters_path.gd
+func _on_update_path(new_pos: Vector2) -> void:
+    curve.add_point(to_local(new_pos))
+    if curve.get_baked_length() > PATH_MAX_LENGTH: curve.remove_point(0)
+    _set_characters_pos()
+
+func _set_characters_pos() -> void:
+    var baked_length := curve.get_baked_length()
+    if baked_length <= 0: return
+    for i in get_children().size():
+        var character_follow: PathFollow2D = get_child(i)
+        var remote_transform: RemoteTransform2D = character_follow.get_child(0)
+        var character: Character = remote_transform.get_node(remote_transform.remote_path)
+        if not character.is_following: continue
+        var target_distance := baked_length - (i + 1) * CHARA_DISTANCE
+        character_follow.progress = max(0.0, target_distance)
+```
+
+## Sistema de animaciones
+
+El método `play_anim()` en `Character` construye el nombre final de la animación combinando el nombre base con la dirección actual.
+
+```gdscript character.gd
+func play_anim(anim_name := &"") -> void:
+    var current_anim_name := sprite.animation.get_slice("_", 0)
+    if not anim_name: anim_name = current_anim_name
+    sprite.flip_h = direction_name == Directions.LEFT
+    var final_direction_name := direction_name
+    if final_direction_name in [Directions.RIGHT, Directions.LEFT]: final_direction_name = &"side"
+    var final_name := "%s_%s" % [anim_name, final_direction_name]
+    if final_name == sprite.animation: return
+    sprite.play(final_name)
+```
+
+Las animaciones siguen el patrón `<estado>_<dirección>`. Las direcciones válidas son:
+
+| Dirección de movimiento | Sufijo de animación | Nota |
+|-------------------------|---------------------|------|
+| Arriba | `_up` | — |
+| Abajo | `_down` | — |
+| Derecha | `_side` | El sprite **no** se invierte |
+| Izquierda | `_side` | El sprite se invierte horizontalmente (`flip_h = true`) |
+
+Las animaciones horizontales (`right` / `left`) comparten los mismos frames bajo el sufijo `_side`. El método `play_anim()` activa `flip_h` cuando la dirección es `LEFT`, de modo que solo se necesita un conjunto de sprites laterales para ambas direcciones.
+
+Ejemplos de nombres de animación resultantes: `idle_up`, `walk_down`, `run_side`.

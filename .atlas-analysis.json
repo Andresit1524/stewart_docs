@@ -1,0 +1,81 @@
+{
+  "projectType": "general",
+  "projectName": "Stewart Prealpha",
+  "projectDescription": "Stewart es un RPG indie de fantasía, aventura y comedia con estética furry, ambientado en un mundo medieval con influencia de la cultura colombiana, desarrollado en Godot 4.",
+  "theme": "almond",
+  "primaryColor": "#040404",
+  "lightColor": "#44e364",
+  "darkColor": "#1c7824",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentación",
+        "groups": [
+          {
+            "group": "Introducción",
+            "pages": [
+              "introduction",
+              "getting-started/setup",
+              "getting-started/contributing"
+            ]
+          },
+          {
+            "group": "El Juego",
+            "pages": [
+              "game/overview",
+              "game/story",
+              "game/characters",
+              "game/world"
+            ]
+          },
+          {
+            "group": "Sistemas de Juego",
+            "pages": [
+              "systems/movement",
+              "systems/dialogue",
+              "systems/music",
+              "systems/scenes"
+            ]
+          },
+          {
+            "group": "Arquitectura",
+            "pages": [
+              "architecture/project-structure",
+              "architecture/state-machine",
+              "architecture/autoloads",
+              "architecture/resources"
+            ]
+          },
+          {
+            "group": "Desarrollo",
+            "pages": [
+              "development/workflow",
+              "development/conventions",
+              "development/changelog"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "RPG de aventura con narrativa y comedia absurda en mundo medieval furry",
+    "Sistema de movimiento en fila para múltiples personajes controlados por el jugador",
+    "Máquina de estados modular (Idle, Walk, Run) para personajes",
+    "Sistema de diálogos integrado mediante Dialogue Manager addon",
+    "Gestores singleton (autoloads) para música, escenas, banderas de progresión y estadísticas del jugador",
+    "Soporte para Godot 4 con C# y GDScript, apuntando a Windows, Linux y macOS"
+  ],
+  "publicApiSurface": [
+    "FlagsManager.get_flag(flag: String) -> bool",
+    "FlagsManager.set_flag(flag: String, value: bool) -> void",
+    "MusicManager.play_music(music_name: String) -> void",
+    "MusicManager.switch_music_playing(on = null) -> void",
+    "SceneManager.change_to_scene(scene_name: String) -> void",
+    "Character.play_anim(anim_name: StringName) -> void",
+    "StateMachine.change_to_state(next_state: Script) -> void",
+    "AutoloadResource.get_item(name: String) -> Variant",
+    "AutoloadResource.set_item(name: String, value: Variant) -> void",
+    "CharactersPath (Path2D) — gestión de trayectoria de personajes en fila"
+  ]
+}
