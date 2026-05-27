@@ -1,7 +1,6 @@
 ---
 layout: home
-title: "Stewart"
-description: "Página principal"
+title: "Página principal"
 nav_order: 1
 ---
 
