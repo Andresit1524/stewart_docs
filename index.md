@@ -31,3 +31,7 @@ graph TD;
     B-->D;
     C-->D;
 </div>
+
+Y un PDF
+
+<object data="pdf/example.pdf" width="1000" height="1000" type='application/pdf'></object>
