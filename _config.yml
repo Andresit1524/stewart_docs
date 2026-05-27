@@ -1,0 +1,9 @@
+title: Stewart docs
+description: Sitio principal de la documentación de Stewart
+
+url: "https://andresit1524.github.io"
+baseurl: "/stewart_docs"
+
+remote_theme: just-the-docs/just-the-docs
+plugins:
+- jekyll-remote-theme
