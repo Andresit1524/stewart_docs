@@ -1,9 +1,15 @@
 title: Stewart docs
 description: Sitio principal de la documentación de Stewart
 
+# URL
 url: "https://andresit1524.github.io"
 baseurl: "/stewart_docs"
 
+# Tema y plugins
 remote_theme: just-the-docs/just-the-docs
 plugins:
 - jekyll-remote-theme
+
+# Configuración de tema
+color_scheme: dark
+enable_copy_code_button: true
